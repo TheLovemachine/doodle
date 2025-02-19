@@ -16,6 +16,8 @@
             font-family: 'Nunito', sans-serif;
             overflow: hidden;
             user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
         }
 
         #score {
@@ -28,7 +30,6 @@
             right: 1vw;
             text-shadow: 0 0 5px #000;
             font-weight: 900;
-            user-select: none;
         }
 
         #game {
@@ -38,19 +39,18 @@
             overflow: hidden;
             border: none;
             user-select: none;
+            -webkit-user-select: none;
         }
 
         .star {
             position: absolute;
-            background: #fff;
             border-radius: 50%;
             animation: twinkle 2s infinite;
-            user-select: none;
         }
 
-        .star-small { width: 1px; height: 1px; opacity: 0.8; }
-        .star-medium { width: 2px; height: 2px; opacity: 0.9; }
-        .star-large { width: 3px; height: 3px; opacity: 1; }
+        .star-small { width: 2px; height: 2px; }
+        .star-medium { width: 4px; height: 4px; }
+        .star-large { width: 6px; height: 6px; }
 
         @keyframes twinkle {
             0% { opacity: 1; }
@@ -65,7 +65,15 @@
             position: absolute;
             border-radius: 5px;
             box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);
-            user-select: none;
+        }
+
+        .cracked-platform {
+            background: #aaa; /* Grayish color to indicate cracked appearance */
+        }
+
+        .cracking {
+            opacity: 0.5;
+            transition: opacity 0.5s;
         }
 
         .glowing-platform {
@@ -98,6 +106,7 @@
             height: 20vh;
             justify-content: center;
             user-select: none;
+            -webkit-user-select: none;
         }
 
         #game-over h2 {
@@ -158,6 +167,8 @@
             z-index: 10;
             transition: all 0.2s;
             user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
         }
 
         .arrow.left { left: 5vw; }
@@ -249,9 +260,8 @@
             star.className = 'star';
             const size = Math.random() < 0.1 ? 'large' : Math.random() < 0.3 ? 'medium' : 'small';
             star.classList.add(`star-${size}`);
-            if (Math.random() < 0.1) {
-                star.style.background = Math.random() < 0.5 ? '#add8e6' : '#ffd700';
-            }
+            const shades = ['#fff', '#f0f0f0', '#e0e0e0', '#d0d0d0'];
+            star.style.background = shades[Math.floor(Math.random() * shades.length)];
             star.style.left = Math.random() * game_width + 'px';
             star.world_bottom = Math.random() * 2000;
             star.style.bottom = (isForeground ? star.world_bottom - scroll_offset : star.world_bottom - scroll_offset * 0.5) + 'px';
@@ -262,7 +272,10 @@
         function createPlatform(world_bottom) {
             const platform = document.createElement('div');
             platform.className = 'platform';
-            if (Math.random() < 0.1) {
+            platform.isCracked = Math.random() < 0.1;
+            if (platform.isCracked) {
+                platform.classList.add('cracked-platform');
+            } else if (Math.random() < 0.1) {
                 platform.classList.add('glowing-platform');
                 platform.isGlowing = true;
             } else {
@@ -274,6 +287,7 @@
             platform.width = platformWidth;
             platform.height = 1.5 * game_height / 100;
             platform.element = platform;
+            platform.isSolid = true;
             game.appendChild(platform);
             platforms.push(platform);
         }
@@ -336,16 +350,26 @@
             if (isGameOver || player.velocity >= 0) return;
             platforms.forEach(platform => {
                 if (
+                    platform.isSolid &&
                     player.world_bottom <= platform.world_bottom + platform.height &&
                     player.world_bottom >= platform.world_bottom &&
                     player.left + player.width > platform.left &&
                     player.left < platform.left + platform.width
                 ) {
-                    let boost = platform.isGlowing ? 1.7 : 1;
-                    player.velocity = jump_height * boost;
-                    if (platform.isGlowing) {
-                        platform.isGlowing = false;
-                        platform.classList.remove('glowing-platform');
+                    if (platform.isCracked) {
+                        platform.isSolid = false;
+                        platform.classList.add('cracking');
+                        setTimeout(() => {
+                            platform.element.remove();
+                            platforms = platforms.filter(p => p !== platform);
+                        }, 500);
+                    } else {
+                        let boost = platform.isGlowing ? 1.7 : 1;
+                        player.velocity = jump_height * boost;
+                        if (platform.isGlowing) {
+                            platform.isGlowing = false;
+                            platform.classList.remove('glowing-platform');
+                        }
                     }
                 }
             });
@@ -458,19 +482,23 @@
             else if (e.key === 'ArrowRight') isRightPressed = false;
         });
 
-        leftArrow.addEventListener('touchstart', () => {
+        leftArrow.addEventListener('touchstart', (event) => {
+            event.preventDefault();
             isLeftPressed = true;
             leftArrow.classList.add('pressed');
         });
-        leftArrow.addEventListener('touchend', () => {
+        leftArrow.addEventListener('touchend', (event) => {
+            event.preventDefault();
             isLeftPressed = false;
             leftArrow.classList.remove('pressed');
         });
-        rightArrow.addEventListener('touchstart', () => {
+        rightArrow.addEventListener('touchstart', (event) => {
+            event.preventDefault();
             isRightPressed = true;
             rightArrow.classList.add('pressed');
         });
-        rightArrow.addEventListener('touchend', () => {
+        rightArrow.addEventListener('touchend', (event) => {
+            event.preventDefault();
             isRightPressed = false;
             rightArrow.classList.remove('pressed');
         });
