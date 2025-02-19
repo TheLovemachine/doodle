@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Doodle Jump</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #111;
+            font-family: 'Nunito', sans-serif;
+            overflow: hidden;
+        }
+
+        #score {
+            color: #fff;
+            font-size: 4vw;
+            padding: 1vh;
+            z-index: 10;
+            position: fixed;
+            top: 0;
+            right: 1vw;
+            text-shadow: 0 0 5px #000;
+            font-weight: 900;
+        }
+
+        #game {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+            border: none;
+        }
+
+        .star {
+            position: absolute;
+            background: #fff;
+            border-radius: 50%;
+            animation: twinkle 2s infinite;
+        }
+
+        .star-small { width: 1px; height: 1px; opacity: 0.8; }
+        .star-medium { width: 2px; height: 2px; opacity: 0.9; }
+        .star-large { width: 3px; height: 3px; opacity: 1; }
+
+        @keyframes twinkle {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .platform {
+            width: 8vw;
+            height: 1.5vh;
+            background: linear-gradient(to right, #32cd32, #228b22);
+            position: absolute;
+            border-radius: 5px;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        #game-over {
+            display: none;
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 1vw 2vw 2vw 2vw;
+            border-radius: 15px;
+            z-index: 20;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 900;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 50vw;
+            height: 20vh;
+            justify-content: center;
+        }
+
+        #game-over h2 {
+            font-size: 3vw;
+            margin-bottom: 2vh;
+        }
+
+        #game-over .buttons {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            gap: 2vw;
+        }
+
+        #game-over button, #game-over a {
+            padding: 2vh 3vw;
+            font-size: 2.5vw;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            color: #fff;
+            text-decoration: none;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 900;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            transition: all 0.2s;
+        }
+
+        #game-over button {
+            background: #32cd32;
+        }
+
+        #game-over button:hover {
+            background: #228b22;
+        }
+
+        #game-over button.exit {
+            background: red;
+        }
+
+        #game-over button.exit:hover {
+            background: darkred;
+        }
+
+        #game-over a {
+            background: #0279F2;
+        }
+
+        #game-over a:hover {
+            background: #025aa6;
+        }
+
+        @media (max-width: 600px) {
+            #score { font-size: 6vw; }
+            #doodler { width: 10vw; height: 10vw; }
+            .platform { width: 15vw; height: 2vh; }
+            #game-over {
+                padding: 2vw 4vw 4vw 4vw;
+                width: 90vw;
+                height: 40vh;
+                top: 50%;
+            }
+            #game-over h2 { font-size: 5vw; }
+            #game-over button, #game-over a { font-size: 4vw; padding: 3vh 5vw; }
+        }
+    </style>
+</head>
+<body>
+    <div id="score">Score: 0</div>
+    <div id="game">
+        <svg id="doodler" width="6vw" height="6vw" viewBox="0 0 100 100" style="position: absolute;">
+            <circle cx="50" cy="60" r="30" fill="#fff" />
+            <circle cx="50" cy="30" r="20" fill="#fff" />
+            <ellipse cx="40" cy="10" rx="5" ry="15" fill="#fff" />
+            <ellipse cx="60" cy="10" rx="5" ry="15" fill="#fff" />
+            <circle cx="45" cy="25" r="3" fill="#000" />
+            <circle cx="55" cy="25" r="3" fill="#000" />
+            <circle cx="50" cy="35" r="2" fill="#ff69b4" />
+        </svg>
+        <div id="game-over">
+            <h2 id="game-over-text">Game Over! Score: 0</h2>
+            <div class="buttons">
+                <button onclick="restartGame()">Replay</button>
+                <button class="exit" onclick="window.close()">Exit</button>
+                <a href="https://x.com/pranitzambre" target="_blank">@pranit</a>
+            </div>
+        </div>
+    </div>
+    <script>
+        const game = document.getElementById('game');
+        const doodler = document.getElementById('doodler');
+        const scoreDiv = document.getElementById('score');
+        const gameOverDiv = document.getElementById('game-over');
+        const gameOverText = document.getElementById('game-over-text');
+
+        let player = {
+            left: window.innerWidth / 2 - 25,
+            world_bottom: 100,
+            velocity: 0,
+            width: 6 * window.innerWidth / 100,
+            height: 6 * window.innerWidth / 100,
+            hasSpringBoost: false,
+            springBoostTimer: 0,
+            hasRocketBoost: false,
+            rocketBoostTimer: 0
+        };
+
+        let platforms = [];
+        let springs = [];
+        let rockets = [];
+        let foregroundStars = [];
+        let backgroundStars = [];
+        let scroll_offset = 0;
+        let score = 0;
+        let base_gravity = 0.2;
+        let gravity = base_gravity;
+        let base_jump_height = 15;
+        let jump_height = base_jump_height;
+        let rocketVelocity = 10;
+        let isLeftPressed = false;
+        let isRightPressed = false;
+        let isGameOver = false;
+        let timeElapsed = 0;
+        const game_width = window.innerWidth;
+        const game_height = window.innerHeight;
+
+        let gyroAlpha = null;
+        let gyroBeta = null;
+        let gyroGamma = null;
+
+        function createStar(isForeground) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            const size = Math.random() < 0.1 ? 'large' : Math.random() < 0.3 ? 'medium' : 'small';
+            star.classList.add(`star-${size}`);
+            if (Math.random() < 0.1) {
+                star.style.background = Math.random() < 0.5 ? '#add8e6' : '#ffd700';
+            }
+            star.style.left = Math.random() * game_width + 'px';
+            star.world_bottom = Math.random() * 2000;
+            star.style.bottom = (isForeground ? star.world_bottom - scroll_offset : star.world_bottom - scroll_offset * 0.5) + 'px';
+            star.isForeground = isForeground;
+            return star;
+        }
+
+        function createSpringSVG() {
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.setAttribute("width", "2vw");
+            svg.setAttribute("height", "2vw");
+            svg.setAttribute("viewBox", "0 0 100 100");
+            svg.style.position = "absolute";
+            svg.innerHTML = `<path d="M20,80 Q30,60 40,80 T60,80 T80,80" stroke="#000" stroke-width="5" fill="none" />
+                             <path d="M20,60 Q30,40 40,60 T60,60 T80,60" stroke="#000" stroke-width="5" fill="none" />
+                             <path d="M20,40 Q30,20 40,40 T60,40 T80,40" stroke="#000" stroke-width="5" fill="none" />`;
+            return svg;
+        }
+
+        function createRocketSVG() {
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.setAttribute("width", "4vw");
+            svg.setAttribute("height", "8vh");
+            svg.setAttribute("viewBox", "0 0 100 160");
+            svg.style.position = "absolute";
+            svg.innerHTML = `<rect x="40" y="20" width="20" height="80" fill="#ff8c00" />
+                             <polygon points="50,0 40,20 60,20" fill="#ff4500" />
+                             <polygon points="30,100 40,100 35,120" fill="#ff4500" />
+                             <polygon points="70,100 60,100 65,120" fill="#ff4500" />
+                             <path d="M45,120 Q50,140 55,120" fill="#ffd700" />
+                             <animate attributeName="opacity" values="1;0.5;1" dur="1s" repeatCount="indefinite" />`;
+            return svg;
+        }
+
+        function createPlatform(world_bottom) {
+            const platform = document.createElement('div');
+            platform.className = 'platform';
+            platform.left = Math.random() * (game_width - 8 * game_width / 100);
+            platform.world_bottom = world_bottom;
+            platform.width = 8 * game_width / 100;
+            platform.height = 1.5 * game_height / 100;
+            platform.element = platform;
+            game.appendChild(platform);
+            platforms.push(platform);
+
+            if (Math.random() < 0.05 && world_bottom > 500) {
+                const spring = createSpringSVG();
+                spring.left = platform.left + (platform.width - 2 * game_width / 100) / 2;
+                spring.world_bottom = platform.world_bottom + platform.height;
+                spring.width = 2 * game_width / 100;
+                spring.height = 2 * game_width / 100;
+                spring.element = spring;
+                game.appendChild(spring);
+                springs.push(spring);
+            } else if (Math.random() < 0.02 && world_bottom > 1000) {
+                const rocket = createRocketSVG();
+                rocket.left = platform.left + (platform.width - 4 * game_width / 100) / 2;
+                rocket.world_bottom = platform.world_bottom + platform.height;
+                rocket.width = 4 * game_width / 100;
+                rocket.height = 8 * game_height / 100;
+                rocket.element = rocket;
+                game.appendChild(rocket);
+                rockets.push(rocket);
+            }
+        }
+
+        function initialize() {
+            let current_world_bottom = 50;
+            for (let i = 0; i < 10; i++) {
+                createPlatform(current_world_bottom);
+                current_world_bottom += 60;
+            }
+            player.left = platforms[0].left + (platforms[0].width - player.width) / 2;
+            player.world_bottom = platforms[0].world_bottom + player.height;
+            doodler.style.left = player.left + 'px';
+            doodler.style.bottom = player.world_bottom - scroll_offset + 'px';
+            isGameOver = false;
+            gameOverDiv.style.display = 'none';
+            gravity = base_gravity;
+            jump_height = base_jump_height;
+            timeElapsed = 0;
+
+            for (let i = 0; i < 100; i++) {
+                const star = createStar(true);
+                game.appendChild(star);
+                foregroundStars.push(star);
+            }
+            for (let i = 0; i < 100; i++) {
+                const star = createStar(false);
+                star.style.opacity = 0.5;
+                game.appendChild(star);
+                backgroundStars.push(star);
+            }
+        }
+
+        function updatePlayer() {
+            if (isGameOver) return;
+            timeElapsed += 1;
+            gravity = base_gravity + (timeElapsed / 7200) * 0.025;
+            jump_height = base_jump_height - (timeElapsed / 14400) * 0.25;
+
+            if (player.hasRocketBoost) {
+                player.velocity = rocketVelocity;
+                player.world_bottom += player.velocity;
+                player.rocketBoostTimer--;
+                if (player.rocketBoostTimer <= 0) player.hasRocketBoost = false;
+            } else {
+                player.velocity -= gravity;
+                player.world_bottom += player.velocity;
+            }
+
+            if (gyroGamma !== null) {
+                player.left += gyroGamma / 5;
+                if (player.left < 0) player.left += game_width;
+                if (player.left > game_width) player.left -= game_width;
+            } else if (isLeftPressed) {
+                player.left -= 5;
+                if (player.left < 0) player.left += game_width;
+            } else if (isRightPressed) {
+                player.left += 5;
+                if (player.left > game_width) player.left -= game_width;
+            }
+
+            if (player.hasSpringBoost) {
+                player.springBoostTimer--;
+                if (player.springBoostTimer <= 0) player.hasSpringBoost = false;
+            }
+        }
+
+        function checkCollisions() {
+            if (isGameOver || player.velocity >= 0 || player.hasRocketBoost) return;
+            platforms.forEach(platform => {
+                if (
+                    player.world_bottom <= platform.world_bottom + platform.height &&
+                    player.world_bottom >= platform.world_bottom &&
+                    player.left + player.width > platform.left &&
+                    player.left < platform.left + platform.width
+                ) {
+                    let boost = player.hasSpringBoost ? 3 : 1;
+                    player.velocity = jump_height * boost;
+                    player.hasSpringBoost = false;
+                }
+            });
+
+            springs = springs.filter(spring => {
+                if (
+                    player.world_bottom <= spring.world_bottom + spring.height &&
+                    player.world_bottom >= spring.world_bottom &&
+                    player.left + player.width > spring.left &&
+                    player.left < spring.left + spring.width
+                ) {
+                    player.hasSpringBoost = true;
+                    player.springBoostTimer = 100;
+                    spring.element.remove();
+                    return false;
+                }
+                return true;
+            });
+
+            rockets = rockets.filter(rocket => {
+                if (
+                    player.world_bottom <= rocket.world_bottom + rocket.height &&
+                    player.world_bottom >= rocket.world_bottom &&
+                    player.left + player.width > rocket.left &&
+                    player.left < rocket.left + rocket.width
+                ) {
+                    player.hasRocketBoost = true;
+                    player.rocketBoostTimer = 660;
+                    rocket.element.remove();
+                    return false;
+                }
+                return true;
+            });
+        }
+
+        function manageScroll() {
+            if (isGameOver) return;
+            if (player.world_bottom > scroll_offset + game_height * 0.6) {
+                scroll_offset = player.world_bottom - game_height * 0.6;
+            }
+            if (player.world_bottom < scroll_offset - player.height) {
+                isGameOver = true;
+                gameOverText.textContent = 'Game Over! Score: ' + Math.floor(score);
+                gameOverDiv.style.display = 'flex';
+            }
+        }
+
+        function render() {
+            if (isGameOver) return;
+            doodler.style.left = player.left + 'px';
+            doodler.style.bottom = (player.world_bottom - scroll_offset) + 'px';
+            platforms.forEach(p => { p.element.style.left = p.left + 'px'; p.element.style.bottom = (p.world_bottom - scroll_offset) + 'px'; });
+            springs.forEach(s => { s.element.style.left = s.left + 'px'; s.element.style.bottom = (s.world_bottom - scroll_offset) + 'px'; });
+            rockets.forEach(r => { r.element.style.left = r.left + 'px'; r.element.style.bottom = (r.world_bottom - scroll_offset) + 'px'; });
+            foregroundStars.forEach(star => { star.style.bottom = (star.world_bottom - scroll_offset) + 'px'; });
+            backgroundStars.forEach(star => { star.style.bottom = (star.world_bottom - scroll_offset * 0.5) + 'px'; });
+            score = Math.max(score, scroll_offset / 10);
+            scoreDiv.textContent = 'Score: ' + Math.floor(score);
+        }
+
+        function gameLoop() {
+            updatePlayer();
+            checkCollisions();
+            manageScroll();
+            render();
+
+            if (!isGameOver) {
+                let max_platform_bottom = Math.max(...platforms.map(p => p.world_bottom));
+                while (max_platform_bottom < scroll_offset + game_height + 60) {
+                    createPlatform(max_platform_bottom + 60);
+                    max_platform_bottom += 60;
+                }
+
+                let max_fg_star_bottom = Math.max(...foregroundStars.map(s => s.world_bottom));
+                while (max_fg_star_bottom < scroll_offset + game_height + 1000) {
+                    for (let i = 0; i < 20; i++) {
+                        const star = createStar(true);
+                        star.world_bottom = max_fg_star_bottom + Math.random() * 1000;
+                        game.appendChild(star);
+                        foregroundStars.push(star);
+                    }
+                    max_fg_star_bottom += 1000;
+                }
+
+                let max_bg_star_bottom = Math.max(...backgroundStars.map(s => s.world_bottom));
+                while (max_bg_star_bottom < scroll_offset * 0.5 + game_height + 1000) {
+                    for (let i = 0; i < 20; i++) {
+                        const star = createStar(false);
+                        star.world_bottom = max_bg_star_bottom + Math.random() * 1000;
+                        star.style.opacity = 0.5;
+                        game.appendChild(star);
+                        backgroundStars.push(star);
+                    }
+                    max_bg_star_bottom += 1000;
+                }
+
+                platforms = platforms.filter(p => p.world_bottom > scroll_offset - 60);
+                springs = springs.filter(s => s.world_bottom > scroll_offset - 60);
+                rockets = rockets.filter(r => r.world_bottom > scroll_offset - 60);
+                foregroundStars = foregroundStars.filter(star => star.world_bottom > scroll_offset - 1000);
+                backgroundStars = backgroundStars.filter(star => star.world_bottom > scroll_offset * 0.5 - 1000);
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function restartGame() {
+            platforms.forEach(p => p.element.remove());
+            springs.forEach(s => s.element.remove());
+            rockets.forEach(r => r.element.remove());
+            foregroundStars.forEach(star => star.remove());
+            backgroundStars.forEach(star => star.remove());
+            platforms = [];
+            springs = [];
+            rockets = [];
+            foregroundStars = [];
+            backgroundStars = [];
+            scroll_offset = 0;
+            score = 0;
+            player.world_bottom = 100;
+            player.velocity = 0;
+            initialize();
+        }
+
+        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+            document.body.addEventListener('click', function() {
+                DeviceOrientationEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            window.addEventListener('deviceorientation', function(event) {
+                                gyroAlpha = event.alpha;
+                                gyroBeta = event.beta;
+                                gyroGamma = event.gamma;
+                            }, true);
+                        }
+                    })
+                    .catch(console.error);
+            }, { once: true });
+        } else {
+            window.addEventListener('deviceorientation', function(event) {
+                gyroAlpha = event.alpha;
+                gyroBeta = event.beta;
+                gyroGamma = event.gamma;
+            }, true);
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'ArrowLeft') isLeftPressed = true;
+            else if (e.key === 'ArrowRight') isRightPressed = true;
+        });
+        document.addEventListener('keyup', e => {
+            if (e.key === 'ArrowLeft') isLeftPressed = false;
+            else if (e.key === 'ArrowRight') isRightPressed = false;
+        });
+        game.addEventListener('touchstart', e => {
+            let touchX = e.touches[0].clientX;
+            if (touchX < game_width / 2) isLeftPressed = true;
+            else isRightPressed = true;
+        });
+        game.addEventListener('touchend', () => {
+            isLeftPressed = false;
+            isRightPressed = false;
+        });
+
+        initialize();
+        gameLoop();
+    </script>
+</body>
+</html>
