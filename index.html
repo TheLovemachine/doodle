@@ -55,12 +55,13 @@
         }
 
         .platform {
-            width: 8vw;
+            width: 8vw;s
             height: 1.5vh;
             background: linear-gradient(to right, #32cd32, #228b22);
             position: absolute;
             border-radius: 5px;
             box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);
+            transform: translateX(0);
         }
 
         .glowing-platform {
@@ -128,14 +129,6 @@
             background: #228b22;
         }
 
-        #game-over button.exit {
-            background: red;
-        }
-
-        #game-over button.exit:hover {
-            background: darkred;
-        }
-
         #game-over a {
             background: #0279F2;
         }
@@ -175,7 +168,6 @@
             <h2 id="game-over-text">Game Over! Score: 0</h2>
             <div class="buttons">
                 <button onclick="restartGame()">Replay</button>
-                <button class="exit" onclick="window.location.reload()">Exit</button>
                 <a href="https://x.com/pranitzambre" target="_blank">@pranit</a>
             </div>
         </div>
@@ -225,21 +217,23 @@
             star.world_bottom = Math.random() * 2000;
             star.style.bottom = (isForeground ? star.world_bottom - scroll_offset : star.world_bottom - scroll_offset * 0.5) + 'px';
             star.isForeground = isForeground;
+            star.style.transform = `translateY(${-(star.world_bottom - scroll_offset)}px)`;
             return star;
         }
 
         function createPlatform(world_bottom) {
             const platform = document.createElement('div');
             platform.className = 'platform';
-            if (Math.random() < 0.1) { // 10% chance for glowing platform
+            if (Math.random() < 0.1) {
                 platform.classList.add('glowing-platform');
                 platform.isGlowing = true;
             } else {
                 platform.isGlowing = false;
             }
-            platform.left = Math.random() * (game_width - 8 * game_width / 100);
+            const platformWidth = platform.style.width.replace('vw', '') * window.innerWidth / 100;
+            platform.left = Math.random() * (game_width - platformWidth); // Ensure fully within screen
             platform.world_bottom = world_bottom;
-            platform.width = 8 * game_width / 100;
+            platform.width = platformWidth;
             platform.height = 1.5 * game_height / 100;
             platform.element = platform;
             game.appendChild(platform);
@@ -248,7 +242,11 @@
 
         function initialize() {
             platforms.forEach(p => p.element.remove());
+            foregroundStars.forEach(star => star.remove());
+            backgroundStars.forEach(star => star.remove());
             platforms = [];
+            foregroundStars = [];
+            backgroundStars = [];
             let current_world_bottom = 50;
             for (let i = 0; i < 10; i++) {
                 createPlatform(current_world_bottom);
@@ -265,12 +263,12 @@
             jump_height = base_jump_height;
             timeElapsed = 0;
 
-            for (let i = 0; i < 100; i++) {
+            for (let i = 0; i < 50; i++) { // Reduced star count for performance
                 const star = createStar(true);
                 game.appendChild(star);
                 foregroundStars.push(star);
             }
-            for (let i = 0; i < 100; i++) {
+            for (let i = 0; i < 50; i++) { // Reduced star count for performance
                 const star = createStar(false);
                 star.style.opacity = 0.5;
                 game.appendChild(star);
@@ -333,11 +331,16 @@
 
         function render() {
             if (isGameOver) return;
-            doodler.style.left = player.left + 'px';
-            doodler.style.bottom = (player.world_bottom - scroll_offset) + 'px';
-            platforms.forEach(p => { p.element.style.left = p.left + 'px'; p.element.style.bottom = (p.world_bottom - scroll_offset) + 'px'; });
-            foregroundStars.forEach(star => { star.style.bottom = (star.world_bottom - scroll_offset) + 'px'; });
-            backgroundStars.forEach(star => { star.style.bottom = (star.world_bottom - scroll_offset * 0.5) + 'px'; });
+            doodler.style.transform = `translate(${player.left}px, ${-(player.world_bottom - scroll_offset)}px)`;
+            platforms.forEach(p => {
+                p.element.style.transform = `translate(${p.left}px, ${-(p.world_bottom - scroll_offset)}px)`;
+            });
+            foregroundStars.forEach(star => {
+                star.style.transform = `translate(${parseFloat(star.style.left)}px, ${-(star.world_bottom - scroll_offset)}px)`;
+            });
+            backgroundStars.forEach(star => {
+                star.style.transform = `translate(${parseFloat(star.style.left)}px, ${-(star.world_bottom - scroll_offset * 0.5)}px)`;
+            });
             score = Math.max(score, scroll_offset / 10);
             scoreDiv.textContent = 'Score: ' + Math.floor(score);
         }
@@ -358,7 +361,7 @@
 
                 let max_fg_star_bottom = Math.max(...foregroundStars.map(s => s.world_bottom));
                 while (max_fg_star_bottom < scroll_offset + game_height + 1000) {
-                    for (let i = 0; i < 20; i++) {
+                    for (let i = 0; i < 10; i++) { // Reduced star generation
                         const star = createStar(true);
                         star.world_bottom = max_fg_star_bottom + Math.random() * 1000;
                         game.appendChild(star);
@@ -369,7 +372,7 @@
 
                 let max_bg_star_bottom = Math.max(...backgroundStars.map(s => s.world_bottom));
                 while (max_bg_star_bottom < scroll_offset * 0.5 + game_height + 1000) {
-                    for (let i = 0; i < 20; i++) {
+                    for (let i = 0; i < 10; i++) { // Reduced star generation
                         const star = createStar(false);
                         star.world_bottom = max_bg_star_bottom + Math.random() * 1000;
                         star.style.opacity = 0.5;
@@ -401,7 +404,6 @@
             initialize();
         }
 
-        // Request motion and orientation permission on page load
         if (typeof DeviceOrientationEvent.requestPermission === 'function') {
             DeviceOrientationEvent.requestPermission()
                 .then(permissionState => {
