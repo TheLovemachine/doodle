@@ -136,6 +136,34 @@
             background: #025aa6;
         }
 
+        .arrow {
+            position: absolute;
+            bottom: 5vh;
+            width: 15vw;
+            height: 15vw;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 8vw;
+            color: #fff;
+            z-index: 10;
+            transition: all 0.2s;
+        }
+
+        .arrow.left { left: 5vw; }
+        .arrow.right { right: 5vw; }
+
+        .arrow.pressed {
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 0 10px #fff;
+        }
+
+        @media (min-width: 600px) {
+            .arrow { display: none; }
+        }
+
         @media (max-width: 600px) {
             #score { font-size: 6vw; }
             #doodler { width: 10vw; height: 10vw; }
@@ -170,6 +198,8 @@
                 <a href="https://x.com/pranitzambre" target="_blank">@pranit</a>
             </div>
         </div>
+        <div class="arrow left" id="left-arrow">←</div>
+        <div class="arrow right" id="right-arrow">→</div>
     </div>
     <script>
         const game = document.getElementById('game');
@@ -177,6 +207,8 @@
         const scoreDiv = document.getElementById('score');
         const gameOverDiv = document.getElementById('game-over');
         const gameOverText = document.getElementById('game-over-text');
+        const leftArrow = document.getElementById('left-arrow');
+        const rightArrow = document.getElementById('right-arrow');
 
         let player = {
             left: window.innerWidth / 2 - 25,
@@ -301,7 +333,7 @@
                     player.left + player.width > platform.left &&
                     player.left < platform.left + platform.width
                 ) {
-                    let boost = platform.isGlowing ? 3 : 1;
+                    let boost = platform.isGlowing ? 1.7 : 1; // Changed to 1.7x
                     player.velocity = jump_height * boost;
                     if (platform.isGlowing) {
                         platform.isGlowing = false;
@@ -417,14 +449,23 @@
             if (e.key === 'ArrowLeft') isLeftPressed = false;
             else if (e.key === 'ArrowRight') isRightPressed = false;
         });
-        game.addEventListener('touchstart', e => {
-            let touchX = e.touches[0].clientX;
-            if (touchX < game_width / 2) isLeftPressed = true;
-            else isRightPressed = true;
+
+        // Mobile arrow controls
+        leftArrow.addEventListener('touchstart', () => {
+            isLeftPressed = true;
+            leftArrow.classList.add('pressed');
         });
-        game.addEventListener('touchend', () => {
+        leftArrow.addEventListener('touchend', () => {
             isLeftPressed = false;
+            leftArrow.classList.remove('pressed');
+        });
+        rightArrow.addEventListener('touchstart', () => {
+            isRightPressed = true;
+            rightArrow.classList.add('pressed');
+        });
+        rightArrow.addEventListener('touchend', () => {
             isRightPressed = false;
+            rightArrow.classList.remove('pressed');
         });
 
         initialize();
