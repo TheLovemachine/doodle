@@ -15,6 +15,7 @@
             background: #111;
             font-family: 'Nunito', sans-serif;
             overflow: hidden;
+            user-select: none;
         }
 
         #score {
@@ -27,6 +28,7 @@
             right: 1vw;
             text-shadow: 0 0 5px #000;
             font-weight: 900;
+            user-select: none;
         }
 
         #game {
@@ -35,6 +37,7 @@
             position: relative;
             overflow: hidden;
             border: none;
+            user-select: none;
         }
 
         .star {
@@ -42,6 +45,7 @@
             background: #fff;
             border-radius: 50%;
             animation: twinkle 2s infinite;
+            user-select: none;
         }
 
         .star-small { width: 1px; height: 1px; opacity: 0.8; }
@@ -61,6 +65,7 @@
             position: absolute;
             border-radius: 5px;
             box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);
+            user-select: none;
         }
 
         .glowing-platform {
@@ -92,6 +97,7 @@
             width: 50vw;
             height: 20vh;
             justify-content: center;
+            user-select: none;
         }
 
         #game-over h2 {
@@ -138,25 +144,27 @@
 
         .arrow {
             position: absolute;
-            bottom: 10vh; /* Moved higher from 5vh */
-            width: 20vw; /* Increased from 15vw */
-            height: 20vw; /* Increased from 15vw */
-            background: rgba(255, 255, 255, 0.5);
-            border-radius: 50%;
+            bottom: 15vh;
+            width: 25vw;
+            height: 25vw;
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(5px);
+            border-radius: 15px;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 12vw; /* Increased from 8vw */
+            font-size: 15vw;
             color: #fff;
             z-index: 10;
             transition: all 0.2s;
+            user-select: none;
         }
 
         .arrow.left { left: 5vw; }
         .arrow.right { right: 5vw; }
 
         .arrow.pressed {
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.5);
             box-shadow: 0 0 10px #fff;
         }
 
@@ -254,14 +262,14 @@
         function createPlatform(world_bottom) {
             const platform = document.createElement('div');
             platform.className = 'platform';
-            if (Math.random() < 0.1) { // 10% chance for glowing platform
+            if (Math.random() < 0.1) {
                 platform.classList.add('glowing-platform');
                 platform.isGlowing = true;
             } else {
                 platform.isGlowing = false;
             }
             const platformWidth = 8 * game_width / 100;
-            platform.left = Math.random() * (game_width - platformWidth); // Ensure fully inside screen
+            platform.left = Math.random() * (game_width - platformWidth);
             platform.world_bottom = world_bottom;
             platform.width = platformWidth;
             platform.height = 1.5 * game_height / 100;
