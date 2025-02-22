@@ -213,7 +213,7 @@
         <div id="game-over">
             <h2 id="game-over-text">Game Over! Score: 0</h2>
             <div class="buttons">
-                <button onclick="restartGame()">Replay</button>
+                <button onclick="location.reload()">Replay</button>
                 <a href="https://x.com/pranitzambre" target="_blank">@pranit</a>
             </div>
         </div>
@@ -435,9 +435,30 @@
                     max_bg_star_bottom += 1000;
                 }
 
-                platforms = platforms.filter(p => p.world_bottom > scroll_offset - 60);
-                foregroundStars = foregroundStars.filter(star => star.world_bottom > scroll_offset - 1000);
-                backgroundStars = backgroundStars.filter(star => star.world_bottom > scroll_offset * 0.5 - 1000);
+                // Remove platforms and stars that are out of view
+                platforms = platforms.filter(p => {
+                    if (p.world_bottom <= scroll_offset - 60) {
+                        p.element.remove();
+                        return false;
+                    }
+                    return true;
+                });
+
+                foregroundStars = foregroundStars.filter(star => {
+                    if (star.world_bottom <= scroll_offset - 1000) {
+                        star.remove();
+                        return false;
+                    }
+                    return true;
+                });
+
+                backgroundStars = backgroundStars.filter(star => {
+                    if (star.world_bottom <= scroll_offset * 0.5 - 1000) {
+                        star.remove();
+                        return false;
+                    }
+                    return true;
+                });
             }
 
             requestAnimationFrame(gameLoop);
