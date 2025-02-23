@@ -20,14 +20,31 @@
             -webkit-touch-callout: none;
         }
 
+        #top-bar {
+            position: fixed;
+            top: 0;
+            right: 1vw;
+            display: flex;
+            align-items: center;
+            z-index: 10;
+        }
+
+        #pause-button {
+            color: #fff;
+            font-size: 4vw;
+            padding: 1vh;
+            text-shadow: 0 0 5px #000;
+            font-weight: 900;
+            cursor: pointer;
+            background: none;
+            border: none;
+            margin-right: 2vw;
+        }
+
         #score {
             color: #fff;
             font-size: 4vw;
             padding: 1vh;
-            z-index: 10;
-            position: fixed;
-            top: 0;
-            right: 1vw;
             text-shadow: 0 0 5px #000;
             font-weight: 900;
         }
@@ -68,7 +85,7 @@
         }
 
         .cracked-platform {
-            background: #aaa; /* Grayish color to indicate cracked appearance */
+            background: #aaa;
         }
 
         .cracking {
@@ -184,6 +201,7 @@
         }
 
         @media (max-width: 600px) {
+            #pause-button { font-size: 6vw; }
             #score { font-size: 6vw; }
             #doodler { width: 10vw; height: 10vw; }
             .platform { width: 15vw; height: 2vh; }
@@ -199,7 +217,10 @@
     </style>
 </head>
 <body>
-    <div id="score">Score: 0</div>
+    <div id="top-bar">
+        <button id="pause-button">⏸️</button>
+        <div id="score">Score: 0</div>
+    </div>
     <div id="game">
         <svg id="doodler" width="6vw" height="6vw" viewBox="0 0 100 100" style="position: absolute;">
             <circle cx="50" cy="60" r="30" fill="#fff" />
@@ -228,6 +249,7 @@
         const gameOverText = document.getElementById('game-over-text');
         const leftArrow = document.getElementById('left-arrow');
         const rightArrow = document.getElementById('right-arrow');
+        const pauseButton = document.getElementById('pause-button');
 
         let player = {
             left: window.innerWidth / 2 - 25,
@@ -249,11 +271,10 @@
         let isLeftPressed = false;
         let isRightPressed = false;
         let isGameOver = false;
+        let isPaused = false;
         let timeElapsed = 0;
         const game_width = window.innerWidth;
         const game_height = window.innerHeight;
-
-        let gyroGamma = null;
 
         function createStar(isForeground) {
             const star = document.createElement('div');
@@ -310,6 +331,8 @@
             gravity = base_gravity;
             jump_height = base_jump_height;
             timeElapsed = 0;
+            isPaused = false;
+            pauseButton.textContent = '⏸️';
 
             for (let i = 0; i < 50; i++) {
                 const star = createStar(true);
@@ -325,7 +348,7 @@
         }
 
         function updatePlayer() {
-            if (isGameOver) return;
+            if (isGameOver || isPaused) return;
             timeElapsed += 1;
             gravity = base_gravity + (timeElapsed / 7200) * 0.025;
             jump_height = base_jump_height - (timeElapsed / 14400) * 0.25;
@@ -333,11 +356,7 @@
             player.velocity -= gravity;
             player.world_bottom += player.velocity;
 
-            if (gyroGamma !== null) {
-                player.left += gyroGamma / 5;
-                if (player.left < 0) player.left += game_width;
-                if (player.left > game_width) player.left -= game_width;
-            } else if (isLeftPressed) {
+            if (isLeftPressed) {
                 player.left -= 5;
                 if (player.left < 0) player.left += game_width;
             } else if (isRightPressed) {
@@ -347,7 +366,8 @@
         }
 
         function checkCollisions() {
-            if (isGameOver || player.velocity >= 0) return;
+            if (isGameOver || isPaused) return;
+            if (player.velocity >= 0) return;
             platforms.forEach(platform => {
                 if (
                     platform.isSolid &&
@@ -376,7 +396,7 @@
         }
 
         function manageScroll() {
-            if (isGameOver) return;
+            if (isGameOver || isPaused) return;
             if (player.world_bottom > scroll_offset + game_height * 0.6) {
                 scroll_offset = player.world_bottom - game_height * 0.6;
             }
@@ -388,7 +408,6 @@
         }
 
         function render() {
-            if (isGameOver) return;
             doodler.style.left = player.left + 'px';
             doodler.style.bottom = (player.world_bottom - scroll_offset) + 'px';
             platforms.forEach(p => { p.element.style.left = p.left + 'px'; p.element.style.bottom = (p.world_bottom - scroll_offset) + 'px'; });
@@ -404,7 +423,7 @@
             manageScroll();
             render();
 
-            if (!isGameOver) {
+            if (!isGameOver && !isPaused) {
                 let max_platform_bottom = Math.max(...platforms.map(p => p.world_bottom));
                 while (max_platform_bottom < scroll_offset + game_height + 100) {
                     const spacing = 80 + Math.random() * 40;
@@ -435,7 +454,6 @@
                     max_bg_star_bottom += 1000;
                 }
 
-                // Remove platforms and stars that are out of view
                 platforms = platforms.filter(p => {
                     if (p.world_bottom <= scroll_offset - 60) {
                         p.element.remove();
@@ -462,36 +480,6 @@
             }
 
             requestAnimationFrame(gameLoop);
-        }
-
-        function restartGame() {
-            platforms.forEach(p => p.element.remove());
-            foregroundStars.forEach(star => star.remove());
-            backgroundStars.forEach(star => star.remove());
-            platforms = [];
-            foregroundStars = [];
-            backgroundStars = [];
-            scroll_offset = 0;
-            score = 0;
-            player.world_bottom = 100;
-            player.velocity = 0;
-            initialize();
-        }
-
-        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-            DeviceOrientationEvent.requestPermission()
-                .then(permissionState => {
-                    if (permissionState === 'granted') {
-                        window.addEventListener('deviceorientation', function(event) {
-                            gyroGamma = event.gamma;
-                        }, true);
-                    }
-                })
-                .catch(console.error);
-        } else {
-            window.addEventListener('deviceorientation', function(event) {
-                gyroGamma = event.gamma;
-            }, true);
         }
 
         document.addEventListener('keydown', e => {
@@ -522,6 +510,11 @@
             event.preventDefault();
             isRightPressed = false;
             rightArrow.classList.remove('pressed');
+        });
+
+        pauseButton.addEventListener('click', () => {
+            isPaused = !isPaused;
+            pauseButton.textContent = isPaused ? '▶️' : '⏸️';
         });
 
         initialize();
